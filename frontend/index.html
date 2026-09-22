@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+		/>
+		<title>Kings Manage | Tenant Portal</title>
+		<meta
+			name="description"
+			content="Kings Manage - find a house, apply, pay your deposit and rent, and manage your tenancy, all in one place."
+		/>
+
+		<!-- Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+			rel="stylesheet"
+		/>
+
+		<!-- Favicons -->
+		<link rel="icon" type="image/svg+xml" href="/assets/kings_manage/rental-portal/favicon.svg" />
+		<link rel="apple-touch-icon" href="/assets/kings_manage/rental-portal/favicon.svg" />
+
+		<!-- Theme colors -->
+		<meta name="msapplication-TileColor" content="#0f2419" />
+		<meta name="theme-color" content="#0f2419" />
+
+		<!-- iOS / PWA support -->
+		<meta name="apple-itunes-app" content="app-id=6741682327, app-argument={{sitename}}" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-title" content="{{ app_name }}" />
+		<meta name="apple-touch-fullscreen" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="screen-orientation" content="portrait" />
+		<meta name="mobile-web-app-capable" content="yes" />
+	</head>
+
+	<body>
+		<div id="root" vaul-drawer-wrapper="true"></div>
+
+		<script>
+			window.csrf_token = '{{ csrf_token }}';
+			if (!window.frappe) window.frappe = {};
+			window.app_name = "{{ app_name }}";
+
+			// Boot data from Frappe backend
+			frappe.boot = JSON.parse({{ boot }});
+		</script>
+
+		<!-- React entry point -->
+		<script type="module" src="/src/main.jsx"></script>
+	</body>
+</html>

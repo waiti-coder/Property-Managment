@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:UNIT-{#####}",
+ "creation": "2026-09-22 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "property",
+  "unit_number",
+  "column_break_unit",
+  "floor",
+  "unit_type",
+  "section_break_status",
+  "status",
+  "column_break_rent",
+  "rent_amount"
+ ],
+ "fields": [
+  {
+   "fieldname": "property",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Property",
+   "options": "Property",
+   "reqd": 1
+  },
+  {
+   "fieldname": "unit_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Unit / House Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_unit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "e.g. Ground, 1, 2 - used to tell vacant units apart floor by floor.",
+   "fieldname": "floor",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Floor"
+  },
+  {
+   "fieldname": "unit_type",
+   "fieldtype": "Data",
+   "label": "Unit Type",
+   "description": "e.g. Bedsitter, 1-Bedroom, 2-Bedroom"
+  },
+  {
+   "fieldname": "section_break_status",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "Vacant",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Vacant\nReserved\nOccupied\nUnder Maintenance",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_rent",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rent_amount",
+   "fieldtype": "Currency",
+   "label": "Monthly Rent"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-22 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Kings Manage",
+ "name": "Unit",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Landlord",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Caretaker"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "unit_number",
+ "track_changes": 1
+}

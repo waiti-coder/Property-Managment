@@ -3,7 +3,7 @@ name = "kings_manage"
 authors = [
     { name = "Kings Solution", email = "edwin@upande.com"}
 ]
-description = "Property management SaaS for the Kenyan market, built on Navari utility-billing"
+description = "Independent property management SaaS for the Kenyan market, built directly on ERPNext"
 requires-python = ">=3.14"
 readme = "README.md"
 dynamic = ["version"]

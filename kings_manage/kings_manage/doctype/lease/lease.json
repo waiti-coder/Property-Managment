@@ -1,0 +1,275 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:LEASE-{#####}",
+ "creation": "2026-09-22 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "tenant_name",
+  "status",
+  "column_break_status",
+  "unit",
+  "section_break_parties",
+  "customer",
+  "column_break_parties",
+  "tenant",
+  "lease_terms_section",
+  "start_date",
+  "end_date",
+  "column_break_terms",
+  "rent_amount",
+  "deposit_amount",
+  "kyc_section",
+  "id_passport_number",
+  "column_break_kyc",
+  "guarantor_name",
+  "guarantor_phone",
+  "deposit_section",
+  "deposit_reference",
+  "deposit_proof",
+  "column_break_deposit",
+  "deposit_confirmed_by",
+  "deposit_confirmed_on",
+  "rejection_reason",
+  "notice_section",
+  "notice_given",
+  "notice_date",
+  "column_break_notice",
+  "move_out_date",
+  "notice_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "tenant_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Tenant Name",
+   "reqd": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nSubmitted\nKYC Verification\nAwaiting Deposit\nActive\nRejected\nEnded",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Unit",
+   "options": "Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_parties",
+   "fieldtype": "Section Break",
+   "label": "Parties"
+  },
+  {
+   "description": "Auto-created for invoicing when this Lease is saved. Not manually editable.",
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Linked Customer",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_parties",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The tenant's portal login. Set once they complete registration via their invite link.",
+   "fieldname": "tenant",
+   "fieldtype": "Link",
+   "label": "Tenant User",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lease_terms_section",
+   "fieldtype": "Section Break",
+   "label": "Lease Terms"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date"
+  },
+  {
+   "fieldname": "column_break_terms",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rent_amount",
+   "fieldtype": "Currency",
+   "label": "Monthly Rent"
+  },
+  {
+   "fieldname": "deposit_amount",
+   "fieldtype": "Currency",
+   "label": "Deposit Amount"
+  },
+  {
+   "fieldname": "kyc_section",
+   "fieldtype": "Section Break",
+   "label": "KYC / Application Details"
+  },
+  {
+   "fieldname": "id_passport_number",
+   "fieldtype": "Data",
+   "label": "ID/Passport Number"
+  },
+  {
+   "fieldname": "column_break_kyc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "guarantor_name",
+   "fieldtype": "Data",
+   "label": "Guarantor Name"
+  },
+  {
+   "fieldname": "guarantor_phone",
+   "fieldtype": "Data",
+   "label": "Guarantor Phone",
+   "options": "Phone"
+  },
+  {
+   "fieldname": "deposit_section",
+   "fieldtype": "Section Break",
+   "label": "Deposit Payment"
+  },
+  {
+   "depends_on": "eval:doc.status!='Draft'",
+   "description": "M-Pesa/bank confirmation code or message quoted by the applicant.",
+   "fieldname": "deposit_reference",
+   "fieldtype": "Data",
+   "label": "Deposit Payment Reference"
+  },
+  {
+   "depends_on": "eval:doc.status!='Draft'",
+   "description": "Screenshot or PDF of the M-Pesa/bank confirmation message.",
+   "fieldname": "deposit_proof",
+   "fieldtype": "Attach",
+   "label": "Deposit Payment Proof"
+  },
+  {
+   "fieldname": "column_break_deposit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "deposit_confirmed_by",
+   "fieldtype": "Link",
+   "label": "Deposit Confirmed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "deposit_confirmed_on",
+   "fieldtype": "Datetime",
+   "label": "Deposit Confirmed On",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.status=='Rejected'",
+   "fieldname": "rejection_reason",
+   "fieldtype": "Small Text",
+   "label": "Rejection Reason",
+   "mandatory_depends_on": "eval:doc.status=='Rejected'"
+  },
+  {
+   "fieldname": "notice_section",
+   "fieldtype": "Section Break",
+   "label": "Notice to Vacate"
+  },
+  {
+   "default": "0",
+   "fieldname": "notice_given",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Notice Given",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notice_date",
+   "fieldtype": "Date",
+   "label": "Notice Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_notice",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "move_out_date",
+   "fieldtype": "Date",
+   "label": "Intended Move-out Date"
+  },
+  {
+   "fieldname": "notice_reason",
+   "fieldtype": "Small Text",
+   "label": "Reason"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-22 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Kings Manage",
+ "name": "Lease",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Landlord",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Caretaker"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "tenant_name",
+ "track_changes": 1
+}

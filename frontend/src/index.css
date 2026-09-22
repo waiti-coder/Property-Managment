@@ -1,0 +1,188 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+	--font-sans: var(--font-inter);
+	--font-serif: var(--font-fraunces);
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+	--font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+	--font-fraunces: "Fraunces", ui-serif, Georgia, serif;
+	--radius: 0.625rem;
+	/* Kings Manage - light variant (same forest-green/ochre family, inverted for contrast) */
+	--background: #f5f0e6;
+	--foreground: #16301f;
+	--card: #ffffff;
+	--card-foreground: #16301f;
+	--popover: #ffffff;
+	--popover-foreground: #16301f;
+	--primary: #b9832e;
+	--primary-foreground: #f5f0e6;
+	--secondary: #eee7d8;
+	--secondary-foreground: #16301f;
+	--muted: #eee7d8;
+	--muted-foreground: #5c7362;
+	--accent: #d4a24c;
+	--accent-foreground: #16301f;
+	--destructive: oklch(0.577 0.245 27.325);
+	--success: #4f8f66;
+	--success-foreground: #ffffff;
+	--border: #ddd3bd;
+	--input: #ddd3bd;
+	--ring: #b9832e;
+	--chart-1: #b9832e;
+	--chart-2: #4f8f66;
+	--chart-3: #5c7362;
+	--chart-4: #d4a24c;
+	--chart-5: #234230;
+	--sidebar: #faf7f0;
+	--sidebar-foreground: #16301f;
+	--sidebar-primary: #b9832e;
+	--sidebar-primary-foreground: #f5f0e6;
+	--sidebar-accent: #eee7d8;
+	--sidebar-accent-foreground: #16301f;
+	--sidebar-border: #ddd3bd;
+	--sidebar-ring: #b9832e;
+}
+
+.dark {
+	/* Kings Manage - dark forest green + ochre */
+	--background: #0f2419;
+	--foreground: #f5f0e6;
+	--card: #16301f;
+	--card-foreground: #f5f0e6;
+	--popover: #16301f;
+	--popover-foreground: #f5f0e6;
+	--primary: #d4a24c;
+	--primary-foreground: #0f2419;
+	--secondary: #1c3a26;
+	--secondary-foreground: #f5f0e6;
+	--muted: #1c3a26;
+	--muted-foreground: #a8c4ab;
+	--accent: #d4a24c;
+	--accent-foreground: #0f2419;
+	--destructive: oklch(0.704 0.191 22.216);
+	--success: #7fb894;
+	--success-foreground: #0f2419;
+	--border: #234230;
+	--input: #234230;
+	--ring: #d4a24c;
+	--chart-1: #d4a24c;
+	--chart-2: #7fb894;
+	--chart-3: #a8c4ab;
+	--chart-4: #e8c078;
+	--chart-5: #4a6b52;
+	--sidebar: #16301f;
+	--sidebar-foreground: #f5f0e6;
+	--sidebar-primary: #d4a24c;
+	--sidebar-primary-foreground: #0f2419;
+	--sidebar-accent: #1c3a26;
+	--sidebar-accent-foreground: #f5f0e6;
+	--sidebar-border: #234230;
+	--sidebar-ring: #d4a24c;
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground font-sans;
+		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+	h1, h2, h3, h4, h5, h6 {
+		font-family: var(--font-serif);
+	}
+}
+
+/* Ensure consistent font rendering across different DPI levels */
+@media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
+	body {
+		-webkit-font-smoothing: subpixel-antialiased;
+	}
+}
+
+/* Fix for sidebar "none" mode height issue */
+.sidebar-none-mode [data-slot="sidebar"] {
+	height: 100vh !important;
+	min-height: 100vh !important;
+}
+
+/* Fix for right-side inset variant support */
+@media (min-width: 768px) {
+	/* Right sidebar inset variant - margin adjustments */
+	[data-side="right"][data-variant="inset"] ~ [data-slot="sidebar-inset"] {
+		margin-right: 0 !important;
+	}
+
+	/* Right sidebar inset variant - collapsed state margin */
+	[data-side="right"][data-variant="inset"][data-state="collapsed"]
+		~ [data-slot="sidebar-inset"] {
+		margin-right: 0.5rem !important;
+	}
+}
+
+/* Smooth scrolling for the entire page */
+html {
+	scroll-behavior: smooth;
+}
+
+/* Logo carousel animation */
+@keyframes logo-scroll {
+	0% {
+		transform: translateX(0);
+	}
+	100% {
+		transform: translateX(-144rem); /* 12 items * 12rem = 144rem */
+	}
+}
+
+.animate-logo-scroll {
+	animation: logo-scroll 30s linear infinite;
+}
+
+.animate-logo-scroll:hover {
+	animation-play-state: paused;
+}

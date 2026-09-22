@@ -1,7 +1,7 @@
 app_name = "kings_manage"
 app_title = "Kings Manage"
 app_publisher = "Kings Solution"
-app_description = "Property management SaaS for the Kenyan market, built on Navari utility-billing"
+app_description = "Independent property management SaaS for the Kenyan market, built on ERPNext"
 app_email = "edwin@upande.com"
 app_license = "mit"
 
@@ -12,7 +12,7 @@ use_json_request_body = True
 # Apps
 # ------------------
 
-# required_apps = []
+required_apps = ["erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -106,8 +106,8 @@ use_json_request_body = True
 # Installation
 # ------------
 
-# before_install = "kings_manage.install.before_install"
-# after_install = "kings_manage.install.after_install"
+after_install = "kings_manage.kings_manage.setup.install.after_install"
+after_migrate = "kings_manage.kings_manage.setup.install.after_migrate"
 
 # Uninstallation
 # ------------
@@ -181,13 +181,11 @@ use_json_request_body = True
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Lease": {
+		"on_update": "kings_manage.kings_manage.lease.on_lease_update",
+	}
+}
 
 # Scheduled Tasks
 # ---------------
