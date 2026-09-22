@@ -17,17 +17,22 @@ Kings Manage is a fully independent [Frappe](https://frappeframework.com/) app t
 
 ## Installation
 
-You can install this app using the [bench](https://github.com/frappe/bench) CLI. It only requires an existing bench with ERPNext already set up — `erpnext` is declared as a required app, so `bench install-app` pulls it in automatically if it isn't already installed on the site:
+You can install this app using the [bench](https://github.com/frappe/bench) CLI. It only requires an existing bench — `erpnext` is declared as a required app, so `bench install-app` pulls it in automatically if it isn't already installed on the site:
 
 ```bash
 cd $PATH_TO_YOUR_BENCH
-bench get-app https://github.com/waiti-coder/Property-Managment.git --branch develop
+bench get-app https://github.com/waiti-coder/Property-Managment.git
 bench install-app kings_manage
+bench build --app kings_manage   # only needed if you skip the frontend build step below
 ```
+
+Installing runs an `after_install` hook that creates the Landlord/Caretaker/Tenant roles, the Lease workflow, and all custom fields automatically — no manual setup required for the backend.
+
+If the site is brand new, complete Frappe/ERPNext's own setup wizard first (log in and create at least one **Company**) — Kings Manage creates rent/deposit invoices against the site's default company, so lease approval will fail until one exists.
 
 ## Frontend
 
-The tenant/landlord portal is a React + Vite single-page app in [`frontend/`](./frontend). To build it:
+The tenant/landlord portal is a React + Vite single-page app in [`frontend/`](./frontend). Its build output isn't committed to this repo (only the source is), so it must be built once per site:
 
 ```bash
 cd apps/kings_manage/frontend
