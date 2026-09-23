@@ -21,6 +21,13 @@ interface ContractInfo {
   contract_terms: string | null;
   signed_on: string | null;
   signed_document: string | null;
+  has_lease_document: boolean;
+}
+
+function downloadUrl(kind: string, contract: string) {
+  return `/api/method/kings_manage.kings_manage.portal_api.download_document?kind=${kind}&name=${encodeURIComponent(
+    contract,
+  )}`;
 }
 
 function extractErrorMessage(err: any): string {
@@ -68,7 +75,12 @@ function AttachSignedCopyForm({
     try {
       const res = await fetch(
         "/api/method/kings_manage.kings_manage.portal_api.upload_signed_contract",
-        { method: "POST", credentials: "include", body },
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "X-Frappe-CSRF-Token": (window as any).csrf_token },
+          body,
+        },
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -187,9 +199,16 @@ export default function ContractPage() {
                   <Button variant="outline" onClick={handleDownload} className="cursor-pointer">
                     Download PDF
                   </Button>
+                  {contract.has_lease_document && (
+                    <Button asChild className="cursor-pointer">
+                      <a href={downloadUrl("contract_lease", contract.name)}>
+                        Download Building Lease
+                      </a>
+                    </Button>
+                  )}
                   {contract.signed_document && (
                     <Button asChild variant="outline" className="cursor-pointer">
-                      <a href={contract.signed_document} target="_blank" rel="noreferrer">
+                      <a href={downloadUrl("contract_signed", contract.name)}>
                         View Attached Signed Copy
                       </a>
                     </Button>

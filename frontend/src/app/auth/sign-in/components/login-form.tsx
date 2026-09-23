@@ -170,12 +170,12 @@ export function LoginForm({
               {loading ? "Signing in..." : "Sign In"}
             </Button>
             <div className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
+              Are you a landlord?{" "}
               <Link
                 to="/auth/sign-up"
                 className="text-primary underline underline-offset-4"
               >
-                Sign up
+                Create an account
               </Link>
             </div>
           </form>

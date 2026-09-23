@@ -53,7 +53,12 @@ function ResolveForm({ issue, onResolved }: { issue: string; onResolved: () => v
     try {
       const res = await fetch(
         "/api/method/kings_manage.kings_manage.portal_api.resolve_issue",
-        { method: "POST", credentials: "include", body },
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "X-Frappe-CSRF-Token": (window as any).csrf_token },
+          body,
+        },
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

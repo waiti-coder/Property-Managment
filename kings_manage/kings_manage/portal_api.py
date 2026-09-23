@@ -14,12 +14,20 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
+from frappe.rate_limiter import rate_limit
 from frappe.utils.file_manager import save_file
 
 from kings_manage.kings_manage.doctype.portal_access_token.portal_access_token import (
 	get_active_token,
 	issue_token,
 	notify,
+)
+from kings_manage.kings_manage.scope import (
+	NOBODY,
+	UNRESTRICTED,
+	assert_owns,
+	get_landlord,
+	property_condition,
 )
 
 
@@ -246,6 +254,7 @@ def get_my_contract() -> dict | None:
 		"contract_terms": contract.contract_terms,
 		"signed_on": contract.signed_on,
 		"signed_document": contract.get("signed_document"),
+		"has_lease_document": bool(contract.get("lease_document")),
 	}
 
 
@@ -279,6 +288,13 @@ def upload_signed_contract(contract: str, signee_name: str | None = None) -> dic
 	if doc.lease != lease.name:
 		frappe.throw(_("You are not permitted to update this contract."), frappe.PermissionError)
 
+	_attach_signed_copy(doc, signee_name or lease.tenant_name)
+	return {"status": frappe.db.get_value("Contract", doc.name, "status")}
+
+
+def _attach_signed_copy(doc: Document, signee_name: str) -> None:
+	"""Attach the uploaded scan/photo of a hand-signed lease and, if the
+	contract isn't signed yet, mark it signed and submit it."""
 	uploaded = frappe.request.files.get("file") if frappe.request else None
 	if not uploaded:
 		frappe.throw(_("Please attach a copy of the signed contract."))
@@ -289,15 +305,13 @@ def upload_signed_contract(contract: str, signee_name: str | None = None) -> dic
 	if not doc.is_signed:
 		doc.reload()
 		doc.is_signed = 1
-		doc.signee = signee_name or lease.tenant_name
+		doc.signee = signee_name
 		doc.signed_on = now_datetime()
 		doc.ip_address = frappe.local.request_ip
 		doc.flags.ignore_permissions = True
 		doc.save()
 		if doc.docstatus == 0:
 			doc.submit()
-
-	return {"status": frappe.db.get_value("Contract", doc.name, "status")}
 
 
 @frappe.whitelist()
@@ -423,67 +437,100 @@ def _require_staff() -> None:
 		frappe.throw(_("You are not permitted to do this."), frappe.PermissionError)
 
 
+def _require_landlord() -> None:
+	roles = frappe.get_roles()
+	if "Landlord" not in roles and "System Manager" not in roles:
+		frappe.throw(_("Only a Landlord can do this."), frappe.PermissionError)
+
+
 @frappe.whitelist()
 def get_admin_dashboard() -> dict:
-	"""Landlord/Caretaker overview: expected vs collected rent for the
-	current month, portfolio size, vacancy, and how many issues came in
-	this month."""
+	"""Landlord/Caretaker overview for the caller's own properties: expected
+	vs collected rent for the current month, portfolio size, vacancy, and how
+	many issues came in this month."""
 	_require_staff()
 
 	month_start = frappe.utils.get_first_day(frappe.utils.nowdate())
 	month_end = frappe.utils.get_last_day(frappe.utils.nowdate())
+	in_scope = property_condition("unit.property")
 
-	expected_monthly_rent = (
-		frappe.db.sql(
-			"select sum(rent_amount) from `tabLease` where status = 'Active'",
-		)[0][0]
-		or 0
-	)
-	collected_rent_this_month = (
-		frappe.db.sql(
-			"""
-			select sum(grand_total) from `tabSales Invoice`
-			where invoice_type = 'Rent' and docstatus = 1 and outstanding_amount = 0
-			and posting_date between %s and %s
-			""",
-			(month_start, month_end),
-		)[0][0]
-		or 0
-	)
+	def scalar(query: str, values: tuple = ()) -> float:
+		return frappe.db.sql(query, values)[0][0] or 0
 
 	return {
-		"expected_monthly_rent": expected_monthly_rent,
-		"collected_rent_this_month": collected_rent_this_month,
-		"property_count": frappe.db.count("Property"),
-		"unit_count": frappe.db.count("Unit"),
-		"vacant_count": frappe.db.count("Unit", {"status": "Vacant"}),
-		"issues_this_month": frappe.db.count(
-			"Issue", {"opening_date": ["between", [month_start, month_end]]}
+		"expected_monthly_rent": scalar(
+			f"""
+			select sum(lease.rent_amount) from `tabLease` lease
+			join `tabUnit` unit on unit.name = lease.unit
+			where lease.status = 'Active' and {in_scope}
+			"""
 		),
-		"notices_count": frappe.db.count("Lease", {"notice_given": 1, "status": "Active"}),
+		"collected_rent_this_month": scalar(
+			f"""
+			select sum(invoice.grand_total) from `tabSales Invoice` invoice
+			join `tabLease` lease on lease.name = invoice.lease
+			join `tabUnit` unit on unit.name = lease.unit
+			where invoice.invoice_type = 'Rent' and invoice.docstatus = 1
+			and invoice.outstanding_amount = 0
+			and invoice.posting_date between %s and %s and {in_scope}
+			""",
+			(month_start, month_end),
+		),
+		"property_count": scalar(
+			f"select count(*) from `tabProperty` where {property_condition('name')}"
+		),
+		"unit_count": scalar(f"select count(*) from `tabUnit` unit where {in_scope}"),
+		"vacant_count": scalar(
+			f"select count(*) from `tabUnit` unit where unit.status = 'Vacant' and {in_scope}"
+		),
+		"issues_this_month": scalar(
+			f"""
+			select count(*) from `tabIssue` issue
+			join `tabUnit` unit on unit.name = issue.unit
+			where issue.opening_date between %s and %s and {in_scope}
+			""",
+			(month_start, month_end),
+		),
+		"notices_count": scalar(
+			f"""
+			select count(*) from `tabLease` lease
+			join `tabUnit` unit on unit.name = lease.unit
+			where lease.notice_given = 1 and lease.status = 'Active' and {in_scope}
+			"""
+		),
 	}
 
 
 @frappe.whitelist()
 def get_notices() -> list[dict]:
-	"""Every active lease a tenant has given notice on, for Landlord/Caretaker."""
+	"""Every active lease a tenant has given notice on, in the caller's properties."""
 	_require_staff()
-	return frappe.get_all(
-		"Lease",
-		filters={"notice_given": 1, "status": "Active"},
-		fields=["name", "tenant_name", "unit", "notice_date", "move_out_date", "notice_reason"],
-		order_by="move_out_date asc",
+	return frappe.db.sql(
+		f"""
+		select lease.name, lease.tenant_name, lease.unit, lease.notice_date,
+		       lease.move_out_date, lease.notice_reason
+		from `tabLease` lease
+		join `tabUnit` unit on unit.name = lease.unit
+		where lease.notice_given = 1 and lease.status = 'Active'
+		and {property_condition("unit.property")}
+		order by lease.move_out_date asc
+		""",
+		as_dict=True,
 	)
 
 
 @frappe.whitelist()
 def get_properties() -> list[dict]:
-	"""Every registered property, for Landlord/Caretaker."""
+	"""The caller's registered properties (every property for an administrator)."""
 	_require_staff()
-	return frappe.get_all(
-		"Property",
-		fields=["name", "property_name", "property_type", "address", "county", "landlord"],
-		order_by="property_name",
+	return frappe.db.sql(
+		f"""
+		select name, property_name, property_type, address, county, landlord
+		from `tabProperty`
+		where {property_condition("name")}
+		order by property_name
+		""",
+		as_dict=True,
 	)
 
 
@@ -494,9 +541,11 @@ def create_property(
 	address: str | None = None,
 	county: str | None = None,
 ) -> dict:
-	"""Registers a new building/estate - lets a Landlord do this from the
-	portal instead of needing desk/ERPNext access."""
+	"""Registers a new building/estate, owned by the calling landlord (or by
+	the landlord of the calling caretaker)."""
 	_require_staff()
+	if get_landlord() == NOBODY:
+		frappe.throw(_("Your account isn't linked to a landlord yet."), frappe.PermissionError)
 
 	doc = frappe.new_doc("Property")
 	doc.property_name = property_name
@@ -511,20 +560,28 @@ def create_property(
 
 @frappe.whitelist()
 def get_units(property: str | None = None, status: str | None = None) -> list[dict]:
-	"""Every unit (any status), for Landlord/Caretaker - optionally filtered."""
+	"""Units (any status) in the caller's properties, optionally filtered."""
 	_require_staff()
 
-	filters = {}
+	conditions = [property_condition("unit.property")]
+	values = {}
 	if property:
-		filters["property"] = property
+		conditions.append("unit.property = %(property)s")
+		values["property"] = property
 	if status:
-		filters["status"] = status
+		conditions.append("unit.status = %(status)s")
+		values["status"] = status
 
-	return frappe.get_all(
-		"Unit",
-		filters=filters,
-		fields=["name", "unit_number", "floor", "property", "unit_type", "rent_amount", "status"],
-		order_by="property, floor, unit_number",
+	return frappe.db.sql(
+		f"""
+		select unit.name, unit.unit_number, unit.floor, unit.property, unit.unit_type,
+		       unit.rent_amount, unit.status
+		from `tabUnit` unit
+		where {" and ".join(conditions)}
+		order by unit.property, unit.floor, unit.unit_number
+		""",
+		values,
+		as_dict=True,
 	)
 
 
@@ -536,8 +593,9 @@ def create_unit(
 	unit_type: str | None = None,
 	rent_amount: float | None = None,
 ) -> dict:
-	"""Registers a new house/unit under a property, from the portal."""
+	"""Registers a new house/unit under one of the caller's properties."""
 	_require_staff()
+	assert_owns("Property", property)
 
 	doc = frappe.new_doc("Unit")
 	doc.property = property
@@ -554,11 +612,10 @@ def create_unit(
 
 @frappe.whitelist()
 def get_tenants(property: str | None = None) -> list[dict]:
-	"""Every tenant/application, for Landlord/Caretaker - optionally filtered
-	to those in a given property."""
+	"""Every tenant/application in the caller's properties, optionally for one."""
 	_require_staff()
 
-	conditions = ["1=1"]
+	conditions = [property_condition("unit.property")]
 	values = {}
 	if property:
 		conditions.append("unit.property = %(property)s")
@@ -569,7 +626,7 @@ def get_tenants(property: str | None = None) -> list[dict]:
 		select lease.name, lease.tenant_name, lease.status, lease.rent_amount,
 		       lease.unit, unit.property as property
 		from `tabLease` lease
-		left join `tabUnit` unit on unit.name = lease.unit
+		join `tabUnit` unit on unit.name = lease.unit
 		where {" and ".join(conditions)}
 		order by lease.creation desc
 		""",
@@ -580,30 +637,27 @@ def get_tenants(property: str | None = None) -> list[dict]:
 
 @frappe.whitelist()
 def get_managed_issues(status: str | None = None) -> list[dict]:
-	"""All issues across every tenant, for Landlord/Caretaker triage."""
+	"""Issues across the caller's properties, for Landlord/Caretaker triage."""
 	_require_staff()
 
-	filters = {}
+	conditions = [property_condition("unit.property")]
+	values = {}
 	if status:
-		filters["status"] = status
+		conditions.append("issue.status = %(status)s")
+		values["status"] = status
 
-	return frappe.get_all(
-		"Issue",
-		filters=filters,
-		fields=[
-			"name",
-			"subject",
-			"description",
-			"status",
-			"category",
-			"unit",
-			"customer",
-			"opening_date",
-			"photo",
-			"resolution_details",
-			"resolution_photo",
-		],
-		order_by="creation desc",
+	return frappe.db.sql(
+		f"""
+		select issue.name, issue.subject, issue.description, issue.status, issue.category,
+		       issue.unit, issue.customer, issue.opening_date, issue.photo,
+		       issue.resolution_details, issue.resolution_photo
+		from `tabIssue` issue
+		join `tabUnit` unit on unit.name = issue.unit
+		where {" and ".join(conditions)}
+		order by issue.creation desc
+		""",
+		values,
+		as_dict=True,
 	)
 
 
@@ -612,6 +666,7 @@ def resolve_issue(issue: str, resolution_details: str) -> dict:
 	"""Caretaker/Landlord marks an issue resolved, with notes and an
 	optional photo as proof of the fix."""
 	_require_staff()
+	assert_owns("Issue", issue)
 
 	doc = frappe.get_doc("Issue", issue)
 	doc.status = "Closed"
@@ -625,6 +680,250 @@ def resolve_issue(issue: str, resolution_details: str) -> dict:
 		doc.db_set("resolution_photo", saved.file_url)
 
 	return {"name": doc.name, "status": doc.status}
+
+
+@frappe.whitelist()
+def get_property_lease_documents() -> list[dict]:
+	"""The caller's properties with their current lease document (if any) and
+	how many tenant contracts each has, for the Contracts page."""
+	_require_staff()
+	properties = frappe.db.sql(
+		f"""
+		select name, property_name, lease_document from `tabProperty`
+		where {property_condition("name")}
+		order by property_name
+		""",
+		as_dict=True,
+	)
+	counts = dict(
+		frappe.db.sql(
+			f"""
+			select unit.property, count(*)
+			from `tabContract` contract
+			join `tabLease` lease on lease.name = contract.lease
+			join `tabUnit` unit on unit.name = lease.unit
+			where {property_condition("unit.property")}
+			group by unit.property
+			"""
+		)
+	)
+	for p in properties:
+		p.lease_document_name = _file_name(p.lease_document)
+		p.lease_document = bool(p.lease_document)
+		p.contract_count = counts.get(p.name, 0)
+	return properties
+
+
+@frappe.whitelist(methods=["POST"])
+def upload_property_lease_document(property: str) -> dict:
+	"""Set or replace a building's standard lease document. Contracts already
+	drawn up keep the copy they were created with."""
+	_require_landlord()
+	assert_owns("Property", property)
+	uploaded = frappe.request.files.get("file") if frappe.request else None
+	if not uploaded:
+		frappe.throw(_("Please choose the lease document to upload."))
+
+	doc = frappe.get_doc("Property", property)
+	saved = save_file(uploaded.filename, uploaded.stream.read(), "Property", doc.name, is_private=1)
+	doc.db_set("lease_document", saved.file_url)
+	return {"name": doc.name, "lease_document_name": saved.file_name}
+
+
+@frappe.whitelist()
+def get_contracts(property: str | None = None) -> list[dict]:
+	"""Every tenant contract in the caller's properties, with signed status."""
+	_require_staff()
+
+	conditions = [property_condition("unit.property")]
+	values = {}
+	if property:
+		conditions.append("unit.property = %(property)s")
+		values["property"] = property
+
+	rows = frappe.db.sql(
+		f"""
+		select contract.name, contract.status, contract.is_signed, contract.signed_on,
+		       contract.start_date, contract.end_date, contract.signed_document,
+		       contract.lease_document, lease.tenant_name, lease.unit, unit.property
+		from `tabContract` contract
+		join `tabLease` lease on lease.name = contract.lease
+		join `tabUnit` unit on unit.name = lease.unit
+		where {" and ".join(conditions)}
+		order by contract.creation desc
+		""",
+		values,
+		as_dict=True,
+	)
+	for r in rows:
+		r.signed_document = bool(r.signed_document)
+		r.lease_document = bool(r.lease_document)
+	return rows
+
+
+@frappe.whitelist(methods=["POST"])
+def upload_signed_contract_for_tenant(contract: str) -> dict:
+	"""Staff attach a tenant's hand-signed paper lease on their behalf."""
+	_require_landlord()
+	assert_owns("Contract", contract)
+	doc = frappe.get_doc("Contract", contract)
+	tenant_name = frappe.db.get_value("Lease", doc.lease, "tenant_name") if doc.lease else None
+	_attach_signed_copy(doc, doc.signee or tenant_name or doc.party_name)
+	return {"status": frappe.db.get_value("Contract", doc.name, "status")}
+
+
+@frappe.whitelist()
+def download_document(kind: str, name: str) -> None:
+	"""Stream a private lease file to someone allowed to see it, since the
+	file's own permissions (tied to the Property/Contract it is attached to)
+	don't cover tenants or Caretakers.
+
+	kind: "property_lease" (a building's lease, its landlord's staff only),
+	"contract_lease" / "contract_signed" (that staff, or the contract's own tenant).
+	"""
+	if kind == "property_lease":
+		_require_staff()
+		assert_owns("Property", name)
+		file_url = frappe.db.get_value("Property", name, "lease_document")
+	elif kind in ("contract_lease", "contract_signed"):
+		if _is_staff():
+			assert_owns("Contract", name)
+		else:
+			lease_name = frappe.db.get_value("Contract", name, "lease")
+			if not lease_name or lease_name != _current_lease().name:
+				frappe.throw(_("You are not permitted to view this document."), frappe.PermissionError)
+		field = "lease_document" if kind == "contract_lease" else "signed_document"
+		file_url = frappe.db.get_value("Contract", name, field)
+	else:
+		frappe.throw(_("Unknown document."))
+
+	if not file_url:
+		frappe.throw(_("No document has been uploaded yet."), frappe.DoesNotExistError)
+
+	file = frappe.get_doc("File", {"file_url": file_url})
+	frappe.local.response.filename = file.file_name
+	frappe.local.response.filecontent = file.get_content()
+	frappe.local.response.type = "download"
+
+
+def _is_staff() -> bool:
+	return bool({"Landlord", "Caretaker", "System Manager"} & set(frappe.get_roles()))
+
+
+def _file_name(file_url: str | None) -> str | None:
+	if not file_url:
+		return None
+	return frappe.db.get_value("File", {"file_url": file_url}, "file_name") or file_url.rsplit("/", 1)[-1]
+
+
+STAFF_ROLES = ("Landlord", "Caretaker")
+
+
+@frappe.whitelist()
+def get_staff() -> list[dict]:
+	"""The calling landlord and the Caretakers they added (every Landlord and
+	Caretaker, for an administrator)."""
+	_require_landlord()
+
+	landlord = get_landlord()
+	condition = "1=1"
+	if landlord is not UNRESTRICTED:
+		escaped = frappe.db.escape(landlord)
+		condition = f"(user.name = {escaped} or user.kings_landlord = {escaped})"
+
+	return frappe.db.sql(
+		f"""
+		select user.name, user.full_name, user.enabled, user.mobile_no,
+		       group_concat(distinct has_role.role order by has_role.role) as roles
+		from `tabUser` user
+		join `tabHas Role` has_role on has_role.parent = user.name and has_role.parenttype = 'User'
+		where has_role.role in %(roles)s and user.name not in ('Administrator', 'Guest')
+		and {condition}
+		group by user.name
+		order by user.full_name
+		""",
+		{"roles": STAFF_ROLES},
+		as_dict=True,
+	)
+
+
+@frappe.whitelist(methods=["POST"])
+def create_staff_user(
+	email: str,
+	first_name: str,
+	last_name: str | None = None,
+	mobile_no: str | None = None,
+	role: str = "Caretaker",
+	password: str | None = None,
+) -> dict:
+	"""A Landlord adds a Caretaker, who then sees only that landlord's
+	properties. Landlords sign up themselves (register_landlord), or an
+	administrator adds one here. With a password the account is usable
+	immediately; without one Frappe emails a set-your-password link (needs
+	outgoing email configured)."""
+	_require_landlord()
+	if role not in STAFF_ROLES:
+		frappe.throw(_("Invalid role."))
+	landlord = get_landlord()
+	if role == "Landlord" and landlord is not UNRESTRICTED:
+		frappe.throw(_("Only an administrator can add a Landlord."), frappe.PermissionError)
+	if frappe.db.exists("User", email):
+		frappe.throw(_("An account with this email already exists."))
+
+	user = frappe.new_doc("User")
+	user.email = email
+	user.first_name = first_name
+	user.last_name = last_name
+	user.mobile_no = mobile_no
+	user.send_welcome_email = 0 if password else 1
+	user.append("roles", {"role": role})
+	if role == "Caretaker" and landlord is not UNRESTRICTED:
+		user.kings_landlord = landlord
+	if password:
+		user.new_password = password
+	user.flags.ignore_permissions = True
+	user.insert()
+
+	return {"name": user.name, "role": role}
+
+
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=5, seconds=60 * 60)
+def register_landlord(
+	first_name: str,
+	email: str,
+	password: str,
+	last_name: str | None = None,
+	mobile_no: str | None = None,
+) -> dict:
+	"""Public landlord sign-up: creates the account and signs them straight in.
+	They start with no properties and only ever see the ones they register."""
+	if frappe.session.user != "Guest":
+		frappe.throw(_("You are already signed in."))
+	email = (email or "").strip().lower()
+	frappe.utils.validate_email_address(email, throw=True)
+	if frappe.db.exists("User", email):
+		frappe.throw(_("An account with this email already exists. Please sign in instead."))
+
+	user = frappe.new_doc("User")
+	user.email = email
+	user.first_name = first_name
+	user.last_name = last_name
+	user.mobile_no = mobile_no
+	user.send_welcome_email = 0
+	user.append("roles", {"role": "Landlord"})
+	user.new_password = password
+	user.flags.ignore_permissions = True
+	user.flags.no_welcome_mail = True
+	user.insert()
+
+	from frappe.auth import LoginManager
+
+	if not getattr(frappe.local, "login_manager", None):
+		frappe.local.login_manager = LoginManager()
+	frappe.local.login_manager.login_as(user.name)
+
+	return {"user": user.name}
 
 
 def _current_lease() -> Document:

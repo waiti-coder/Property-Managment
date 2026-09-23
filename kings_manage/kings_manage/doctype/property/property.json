@@ -13,7 +13,9 @@
   "section_break_address",
   "address",
   "column_break_address",
-  "county"
+  "county",
+  "section_break_lease",
+  "lease_document"
  ],
  "fields": [
   {
@@ -37,7 +39,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Who owns this property. Informational only - the Landlord role sees every property regardless of this field.",
+   "description": "The landlord who owns this property. Landlords and their Caretakers only see properties (and their units, leases, contracts, invoices and issues) where they are the landlord. Set automatically when a landlord registers the property.",
    "fieldname": "landlord",
    "fieldtype": "Link",
    "label": "Landlord",
@@ -62,12 +64,23 @@
    "fieldtype": "Data",
    "in_standard_filter": 1,
    "label": "County"
+  },
+  {
+   "fieldname": "section_break_lease",
+   "fieldtype": "Section Break",
+   "label": "Lease Contract"
+  },
+  {
+   "fieldname": "lease_document",
+   "fieldtype": "Attach",
+   "label": "Lease Document",
+   "description": "This building's standard lease (PDF/Word). Every new tenant contract in this building gets a copy of it to download and sign."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-22 09:00:00.000000",
+ "modified": "2026-09-23 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kings Manage",
  "name": "Property",

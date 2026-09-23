@@ -202,8 +202,19 @@ after_migrate = "kings_manage.kings_manage.setup.install.after_migrate"
 doc_events = {
 	"Lease": {
 		"on_update": "kings_manage.kings_manage.lease.on_lease_update",
-	}
+	},
+	"Property": {
+		"validate": "kings_manage.kings_manage.scope.set_property_landlord",
+	},
 }
+
+# Each landlord sees only records under their own properties, in the desk
+# too - see kings_manage/kings_manage/scope.py.
+_SCOPED = ("Property", "Unit", "Lease", "Contract", "Sales Invoice", "Issue", "Payment Entry")
+permission_query_conditions = {
+	doctype: "kings_manage.kings_manage.scope.get_permission_query_conditions" for doctype in _SCOPED
+}
+has_permission = {doctype: "kings_manage.kings_manage.scope.has_permission" for doctype in _SCOPED}
 
 # Scheduled Tasks
 # ---------------

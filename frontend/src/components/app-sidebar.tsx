@@ -1,7 +1,7 @@
 "use client";
 
 import { Logo } from "@/components/logo";
-import { Bell, ClipboardList, FileText, Home, Layers, LayoutDashboard, LogIn, User, Users, Wallet, Wrench } from "lucide-react";
+import { Bell, ClipboardList, FileSignature, FileText, Home, Layers, LayoutDashboard, LogIn, User, UserCog, Users, Wallet, Wrench } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
 
@@ -128,23 +128,31 @@ const staffNavGroups = [
         icon: Bell,
       },
       {
+        title: "Contracts",
+        url: "/admin/contracts",
+        icon: FileSignature,
+      },
+      {
         title: "Manage Issues",
         url: "/admin/issues",
         icon: ClipboardList,
       },
     ],
   },
-  {
-    label: "User Management",
-    items: [
-      {
-        title: "Users",
-        url: "/users",
-        icon: User,
-      },
-    ],
-  },
 ];
+
+// Landlords add Caretakers from Staff; only a System Manager also gets the
+// raw Frappe user list. Caretakers get neither.
+function userManagementGroup(roles: string[]) {
+  const items = [];
+  if (roles.includes("Landlord") || roles.includes("System Manager")) {
+    items.push({ title: "Staff", url: "/admin/staff", icon: UserCog });
+  }
+  if (roles.includes("System Manager")) {
+    items.push({ title: "All Users", url: "/users", icon: User });
+  }
+  return items.length ? [{ label: "User Management", items }] : [];
+}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, isLoading, error, logout } = useUser();
@@ -192,7 +200,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isStaff = userRoles.includes("Landlord") || userRoles.includes("Caretaker");
   const isTenant = userRoles.includes("Tenant");
   const navGroupsForUser = isStaff
-    ? staffNavGroups
+    ? [...staffNavGroups, ...userManagementGroup(userRoles)]
     : isTenant
       ? tenantNavGroups
       : privateNavGroups;

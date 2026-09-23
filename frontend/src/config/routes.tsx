@@ -34,6 +34,8 @@ const AdminProperties = lazy(() => import("@/app/admin/properties/page"));
 const AdminUnits = lazy(() => import("@/app/admin/units/page"));
 const AdminTenants = lazy(() => import("@/app/admin/tenants/page"));
 const AdminNotices = lazy(() => import("@/app/admin/notices/page"));
+const AdminContracts = lazy(() => import("@/app/admin/contracts/page"));
+const AdminStaff = lazy(() => import("@/app/admin/staff/page"));
 
 import { ProtectedRoute } from "@/app/auth/protected-route";
 import { RoleProtectedRoute } from "@/app/auth/role-protected-route";
@@ -148,6 +150,22 @@ export const routes: RouteConfig[] = [
     element: (
       <RoleProtectedRoute roles={["Landlord", "Caretaker", "System Manager"]}>
         <AdminNotices />
+      </RoleProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/contracts",
+    element: (
+      <RoleProtectedRoute roles={["Landlord", "Caretaker", "System Manager"]}>
+        <AdminContracts />
+      </RoleProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/staff",
+    element: (
+      <RoleProtectedRoute roles={["Landlord", "System Manager"]}>
+        <AdminStaff />
       </RoleProtectedRoute>
     ),
   },

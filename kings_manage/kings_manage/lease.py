@@ -61,6 +61,11 @@ def create_contract(doc):
 	contract.end_date = doc.end_date
 	contract.contract_template = template_name
 	contract.contract_terms = terms
+	# Snapshot the building's lease document, so replacing it later only
+	# affects new tenants, not contracts already drawn up.
+	property_name = frappe.db.get_value("Unit", doc.unit, "property") if doc.unit else None
+	if property_name:
+		contract.lease_document = frappe.db.get_value("Property", property_name, "lease_document")
 	contract.flags.ignore_permissions = True
 	contract.flags.ignore_mandatory = True
 	contract.insert()

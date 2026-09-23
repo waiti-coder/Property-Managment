@@ -53,7 +53,12 @@ export default function IssuesPage() {
     try {
       const res = await fetch(
         "/api/method/kings_manage.kings_manage.portal_api.report_issue",
-        { method: "POST", credentials: "include", body: formData },
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "X-Frappe-CSRF-Token": (window as any).csrf_token },
+          body: formData,
+        },
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

@@ -23,6 +23,17 @@ ISSUE_CATEGORY_OPTIONS = "Plumbing\nElectrical\nStructural\nOther"
 ISSUE_PRIORITIES = ["Low", "Medium", "High"]
 
 CUSTOM_FIELDS = {
+	"User": [
+		{
+			"fieldname": "kings_landlord",
+			"fieldtype": "Link",
+			"options": "User",
+			"label": "Kings Manage Landlord",
+			"description": "For a Caretaker: the landlord whose properties they manage.",
+			"insert_after": "role_profile_name",
+			"read_only": 1,
+		},
+	],
 	"Sales Invoice": [
 		{
 			"fieldname": "lease",
@@ -57,6 +68,15 @@ CUSTOM_FIELDS = {
 			"description": "A scanned/photographed copy of the physically signed lease, "
 			"attached by the tenant.",
 			"insert_after": "signed_on",
+		},
+		{
+			"fieldname": "lease_document",
+			"fieldtype": "Attach",
+			"label": "Lease Document",
+			"description": "The building's lease document as it stood when this contract was "
+			"created, for the tenant to download and sign.",
+			"insert_after": "lease",
+			"read_only": 1,
 		},
 	],
 	"Issue": [

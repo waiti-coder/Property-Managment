@@ -160,6 +160,7 @@ export default function UsersPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Frappe-CSRF-Token": (window as any).csrf_token,
         },
         body: JSON.stringify({
           doctype: "User",
