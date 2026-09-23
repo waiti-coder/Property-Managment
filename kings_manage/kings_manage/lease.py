@@ -25,10 +25,20 @@ def on_lease_update(doc, method=None):
 		doc.db_set("deposit_confirmed_by", frappe.session.user, update_modified=False)
 		doc.db_set("deposit_confirmed_on", now_datetime(), update_modified=False)
 
-	create_contract(doc)
-	_notify_approved(doc)
-	create_deposit_invoice(doc)
-	create_recurring_rent_invoice(doc)
+	# The Contract, invoices and rent Auto Repeat are system-generated
+	# records, so create them as Administrator: a Landlord confirming the
+	# deposit can't read ERPNext's receivable Accounts (invoice validation
+	# fails), and Auto Repeat re-checks its owner's read access on every
+	# monthly run, disabling itself if that owner ever loses it.
+	original_user = frappe.session.user
+	frappe.set_user("Administrator")
+	try:
+		create_contract(doc)
+		_notify_approved(doc)
+		create_deposit_invoice(doc)
+		create_recurring_rent_invoice(doc)
+	finally:
+		frappe.set_user(original_user)
 
 	frappe.db.set_value("Unit", doc.unit, "status", "Occupied")
 
@@ -95,6 +105,8 @@ def _create_invoice(doc, invoice_type, amount, enable_auto_repeat):
 		auto_repeat.reference_doctype = "Sales Invoice"
 		auto_repeat.reference_document = invoice.name
 		auto_repeat.frequency = "Monthly"
+		# Post each month's invoice for real, not as a Draft the tenant can't pay against.
+		auto_repeat.submit_on_creation = 1
 		auto_repeat.start_date = doc.start_date or frappe.utils.nowdate()
 		if doc.end_date:
 			auto_repeat.end_date = doc.end_date
