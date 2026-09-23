@@ -74,6 +74,13 @@ website_route_rules = [
 	{"from_route": "/rental-portal/<path:app_path>", "to_route": "rental-portal"},
 ]
 
+# Entering the site at "/" opens the portal's sign-in page; the portal itself
+# forwards already signed-in users on to their dashboard. 302 so browsers
+# don't cache it permanently.
+website_redirects = [
+	{"source": "/", "target": "/rental-portal/auth/sign-in", "redirect_http_status": 302},
+]
+
 # Home Pages
 # ----------
 
