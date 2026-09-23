@@ -109,6 +109,17 @@ def ensure_defaults():
 	create_lease_workflow()
 	enable_auto_repeat_on_sales_invoice()
 	ensure_issue_priorities()
+	make_portal_the_default_app()
+
+
+def make_portal_the_default_app():
+	"""Website Users (tenants) are redirected after login to the site's
+	default app before any home-page hook is consulted, and with ERPNext
+	installed that default is /desk/home, which tenants can't use. Pointing
+	it at Kings Manage (route /rental-portal, see add_to_apps_screen) lands
+	them on the portal. Only set it when nobody has chosen another default."""
+	if not frappe.db.get_single_value("System Settings", "default_app"):
+		frappe.db.set_single_value("System Settings", "default_app", "kings_manage")
 
 
 def disable_desk_access_for_customer_role():

@@ -1,0 +1,24 @@
+import json
+
+import frappe
+from frappe.utils import get_system_timezone
+
+no_cache = 1
+
+
+def get_context(context):
+	context.csrf_token = frappe.sessions.get_csrf_token()
+	context.app_name = "Kings Manage"
+	# The template does `JSON.parse({{ boot }})`, so hand it a JS string literal.
+	context.boot = json.dumps(
+		frappe.as_json(
+			{
+				"frappe_version": frappe.__version__,
+				"site_name": frappe.local.site,
+				"read_only_mode": frappe.flags.read_only,
+				"system_timezone": get_system_timezone(),
+			},
+			indent=None,
+		)
+	)
+	return context

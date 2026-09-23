@@ -15,15 +15,14 @@ use_json_request_body = True
 required_apps = ["erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "kings_manage",
-# 		"logo": "/assets/kings_manage/logo.png",
-# 		"title": "Kings Manage",
-# 		"route": "/kings_manage",
-# 		"has_permission": "kings_manage.api.permission.has_app_permission",
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "kings_manage",
+		"logo": "/assets/kings_manage/rental-portal/favicon.svg",
+		"title": "Kings Manage",
+		"route": "/rental-portal",
+	}
+]
 
 # The dock, the rail down the left of the desk, is a document rather than a hook. Author it in
 # Manage Dock on a developer-mode site and press Export to App, and it is written to
@@ -66,6 +65,15 @@ required_apps = ["erpnext"]
 # include app icons in desk
 # app_include_icons = "kings_manage/public/icons.svg"
 
+# Website Route Rules
+# -------------------
+
+# The portal is a client-side-routed SPA: serve www/rental-portal.html for every
+# sub-path so deep links and page refreshes don't 404.
+website_route_rules = [
+	{"from_route": "/rental-portal/<path:app_path>", "to_route": "rental-portal"},
+]
+
 # Home Pages
 # ----------
 
@@ -76,6 +84,9 @@ required_apps = ["erpnext"]
 # role_home_page = {
 # 	"Role": "home_page"
 # }
+
+# Send visitors and Kings Manage users to the portal, both on "/" and after login.
+get_website_user_home_page = "kings_manage.kings_manage.home.get_home_page"
 
 # Setup Wizard
 # ------------
