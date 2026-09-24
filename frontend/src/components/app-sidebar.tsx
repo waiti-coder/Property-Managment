@@ -1,7 +1,7 @@
 "use client";
 
 import { Logo } from "@/components/logo";
-import { Bell, ClipboardList, FileSignature, FileText, Home, Layers, LayoutDashboard, LogIn, User, UserCog, Users, Wallet, Wrench } from "lucide-react";
+import { Bell, ClipboardList, ExternalLink, FileCheck, FileSignature, FileText, Home, Layers, LayoutDashboard, LogIn, User, UserCog, Users, Wallet, Wrench } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
 
@@ -11,12 +11,34 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useUser } from "@/contexts/user-context";
+
+// /app is the ERPNext desk - a separate application outside this SPA's
+// basename, so it needs a plain <a> (full page load), not a router <Link>.
+function DeskLink() {
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>Advanced</SidebarGroupLabel>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild tooltip="Open ERPNext Desk" className="cursor-pointer">
+            <a href="/app">
+              <ExternalLink />
+              <span>ERPNext Desk</span>
+            </a>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+}
 
 const data = {
   navGroups: [],
@@ -126,6 +148,11 @@ const staffNavGroups = [
         title: "Notices",
         url: "/admin/notices",
         icon: Bell,
+      },
+      {
+        title: "Applications",
+        url: "/admin/applications",
+        icon: FileCheck,
       },
       {
         title: "Contracts",
@@ -239,6 +266,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 items={group.items}
               />
             ))}
+            {(userRoles.includes("Landlord") || userRoles.includes("System Manager")) && (
+              <DeskLink />
+            )}
           </>
         ) : (
           <>

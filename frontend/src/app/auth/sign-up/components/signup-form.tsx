@@ -61,7 +61,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border-white/40 bg-white/25 shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-white/10">
         <CardContent>
           <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
             <div className="flex flex-col items-center text-center gap-1">

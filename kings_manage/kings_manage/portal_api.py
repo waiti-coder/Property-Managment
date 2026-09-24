@@ -13,6 +13,7 @@ own data.
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.workflow import apply_workflow
 from frappe.utils import now_datetime
 from frappe.rate_limiter import rate_limit
 from frappe.utils.file_manager import save_file
@@ -145,6 +146,37 @@ def _create_application(
 	# Returned directly (not just emailed) so the browser can move straight to
 	# the tracking page even if no outgoing Email Account is configured yet.
 	return {"lease": lease.name, "token": token_doc.token}
+
+
+@frappe.whitelist(methods=["POST"])
+def register_tenant(
+	unit: str,
+	full_name: str,
+	phone: str,
+	email: str,
+	id_passport_number: str | None = None,
+	move_in_date: str | None = None,
+) -> dict:
+	"""Landlord/Caretaker registers a walk-in tenant for a vacant unit
+	directly from the portal, instead of the tenant applying online
+	themselves. Goes through the exact same application workflow as a public
+	application (Submitted -> KYC Verification -> Awaiting Deposit -> Active)
+	- it does not skip approval."""
+	_require_staff()
+	assert_owns("Unit", unit)
+
+	if frappe.db.get_value("Unit", unit, "status") != "Vacant":
+		frappe.throw(_("This unit is not vacant."))
+
+	# Same permission-check quirk as the guest application flow: Frappe's
+	# workflow engine checks the *session user's* read permission even on an
+	# internal save, regardless of ignore_permissions on the document.
+	original_user = frappe.session.user
+	frappe.set_user("Administrator")
+	try:
+		return _create_application(unit, full_name, phone, email, id_passport_number, move_in_date)
+	finally:
+		frappe.set_user(original_user)
 
 
 @frappe.whitelist(allow_guest=True)
@@ -633,6 +665,66 @@ def get_tenants(property: str | None = None) -> list[dict]:
 		values,
 		as_dict=True,
 	)
+
+
+@frappe.whitelist()
+def get_applications(stage: str | None = None) -> list[dict]:
+	"""Applications still moving through the Lease workflow, in the caller's
+	properties - for Landlord/Caretaker to action from the portal, no
+	ERPNext desk/workflow buttons needed."""
+	_require_staff()
+
+	conditions = [property_condition("unit.property")]
+	values = {}
+	if stage:
+		conditions.append("lease.status = %(stage)s")
+		values["stage"] = stage
+	else:
+		conditions.append("lease.status in ('Submitted', 'KYC Verification', 'Awaiting Deposit')")
+
+	return frappe.db.sql(
+		f"""
+		select lease.name, lease.tenant_name, lease.status, lease.unit, unit.property as property,
+		       lease.rent_amount, lease.deposit_amount, lease.deposit_reference, lease.deposit_proof,
+		       lease.id_passport_number, lease.guarantor_name, lease.guarantor_phone, lease.creation
+		from `tabLease` lease
+		join `tabUnit` unit on unit.name = lease.unit
+		where {" and ".join(conditions)}
+		order by lease.creation asc
+		""",
+		values,
+		as_dict=True,
+	)
+
+
+@frappe.whitelist(methods=["POST"])
+def advance_application(
+	lease: str,
+	action: str,
+	rejection_reason: str | None = None,
+	deposit_reference: str | None = None,
+) -> dict:
+	"""Drive the Lease Application Workflow (Review / Approve / Confirm
+	Deposit / Reject) from a single button in the portal, instead of
+	requiring ERPNext desk access to use workflow action buttons."""
+	_require_staff()
+	assert_owns("Lease", lease)
+
+	doc = frappe.get_doc("Lease", lease)
+	# apply_workflow() reloads the doc from the database before checking the
+	# transition's condition, so any field it needs (rejection_reason,
+	# deposit_reference) must already be persisted, not just set in memory.
+	if action == "Reject":
+		if not rejection_reason:
+			frappe.throw(_("Please provide a reason for rejecting this application."))
+		doc.db_set("rejection_reason", rejection_reason)
+	if action == "Confirm Deposit" and not (doc.deposit_reference or doc.deposit_proof):
+		# The tenant may not have submitted anything online (e.g. a walk-in
+		# who paid cash) - staff can just say "deposit paid" themselves.
+		doc.db_set("deposit_reference", deposit_reference or "Confirmed by staff")
+
+	apply_workflow(doc, action)
+	return {"status": doc.status}
 
 
 @frappe.whitelist()

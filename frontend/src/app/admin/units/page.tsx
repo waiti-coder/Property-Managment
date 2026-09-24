@@ -17,8 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useFrappeGetCall, useFrappePostCall } from "frappe-react-sdk";
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Fragment, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 
 interface UnitRow {
   name: string;
@@ -129,6 +129,88 @@ function AddUnitForm({
   );
 }
 
+function RegisterTenantForm({
+  unit,
+  onRegistered,
+  onCancel,
+}: {
+  unit: string;
+  onRegistered: () => void;
+  onCancel: () => void;
+}) {
+  const { call, loading } = useFrappePostCall(
+    "kings_manage.kings_manage.portal_api.register_tenant",
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    const formData = new FormData(e.currentTarget);
+    try {
+      await call({
+        unit,
+        full_name: formData.get("full_name") as string,
+        phone: formData.get("phone") as string,
+        email: formData.get("email") as string,
+        id_passport_number: (formData.get("id_passport_number") as string) || undefined,
+        move_in_date: (formData.get("move_in_date") as string) || undefined,
+      });
+      setDone(true);
+      onRegistered();
+    } catch (err: any) {
+      setError(extractErrorMessage(err));
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="text-sm">
+        Tenant registered - it now needs approval on the{" "}
+        <Link to="/admin/applications" className="underline">
+          Applications
+        </Link>{" "}
+        page.
+      </div>
+    );
+  }
+
+  return (
+    <form className="grid gap-3 sm:grid-cols-2 mt-3" onSubmit={handleSubmit}>
+      <div className="grid gap-2">
+        <Label htmlFor={`full_name-${unit}`}>Full Name</Label>
+        <Input id={`full_name-${unit}`} name="full_name" required />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor={`phone-${unit}`}>Phone</Label>
+        <Input id={`phone-${unit}`} name="phone" required />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor={`email-${unit}`}>Email</Label>
+        <Input id={`email-${unit}`} name="email" type="email" required />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor={`id_passport_number-${unit}`}>ID/Passport Number</Label>
+        <Input id={`id_passport_number-${unit}`} name="id_passport_number" />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor={`move_in_date-${unit}`}>Move-in Date</Label>
+        <Input id={`move_in_date-${unit}`} name="move_in_date" type="date" />
+      </div>
+      {error && <div className="text-sm text-destructive sm:col-span-2">{error}</div>}
+      <div className="flex gap-2 sm:col-span-2">
+        <Button type="submit" size="sm" disabled={loading} className="cursor-pointer">
+          {loading ? "Registering..." : "Register Tenant"}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel} className="cursor-pointer">
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export default function AdminUnitsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get("status") || "";
@@ -149,6 +231,7 @@ export default function AdminUnitsPage() {
     { property: propertyFilter || undefined, status: statusFilter || undefined },
   );
   const units = response?.message;
+  const [registeringUnit, setRegisteringUnit] = useState<string | null>(null);
 
   const updateFilter = (key: "status" | "property", value: string) => {
     const next = new URLSearchParams(searchParams);
@@ -209,22 +292,48 @@ export default function AdminUnitsPage() {
                     <TableHead>Type</TableHead>
                     <TableHead>Rent</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {units.map((u) => (
-                    <TableRow key={u.name}>
-                      <TableCell className="font-medium">{u.unit_number}</TableCell>
-                      <TableCell>{u.property}</TableCell>
-                      <TableCell>{u.floor || "-"}</TableCell>
-                      <TableCell>{u.unit_type || "-"}</TableCell>
-                      <TableCell>{formatCurrency(u.rent_amount)}</TableCell>
-                      <TableCell>
-                        <Badge variant={u.status === "Vacant" ? "default" : "secondary"}>
-                          {u.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
+                    <Fragment key={u.name}>
+                      <TableRow>
+                        <TableCell className="font-medium">{u.unit_number}</TableCell>
+                        <TableCell>{u.property}</TableCell>
+                        <TableCell>{u.floor || "-"}</TableCell>
+                        <TableCell>{u.unit_type || "-"}</TableCell>
+                        <TableCell>{formatCurrency(u.rent_amount)}</TableCell>
+                        <TableCell>
+                          <Badge variant={u.status === "Vacant" ? "default" : "secondary"}>
+                            {u.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {u.status === "Vacant" && registeringUnit !== u.name && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="cursor-pointer"
+                              onClick={() => setRegisteringUnit(u.name)}
+                            >
+                              Register Tenant
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      {registeringUnit === u.name && (
+                        <TableRow>
+                          <TableCell colSpan={7}>
+                            <RegisterTenantForm
+                              unit={u.name}
+                              onRegistered={() => mutate()}
+                              onCancel={() => setRegisteringUnit(null)}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>

@@ -88,7 +88,7 @@ export function LoginForm({
   if (isUserLoading) {
     return (
       <div className={cn("flex flex-col gap-6", className)} {...props}>
-        <Card className="overflow-hidden p-0">
+        <Card className="overflow-hidden p-0 border-white/40 bg-white/25 shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-white/10">
           <CardContent className="grid p-0 md:grid-cols-2">
             <div className="p-6 md:p-8 flex items-center justify-center min-h-[400px]">
               <div className="flex flex-col items-center gap-4">
@@ -108,7 +108,7 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border-white/40 bg-white/25 shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-white/10">
         <CardContent>
           <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
             <div className="flex flex-col items-center text-center gap-1">

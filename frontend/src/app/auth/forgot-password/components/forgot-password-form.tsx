@@ -13,9 +13,9 @@ export function ForgotPasswordForm({
 }: React.ComponentProps<"div">) {
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="overflow-hidden p-0">
-        <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8">
+      <Card className="overflow-hidden border-white/40 bg-white/25 shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-white/10">
+        <CardContent>
+          <form>
             <div className="flex flex-col gap-6">
               <div className="flex justify-center mb-2">
                 <a href="/" className="flex items-center gap-2 font-medium">
@@ -54,13 +54,6 @@ export function ForgotPasswordForm({
               </div>
             </div>
           </form>
-          <div className="bg-muted relative hidden md:block">
-            <img
-              src="https://ui.shadcn.com/placeholder.svg"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.95] dark:invert"
-            />
-          </div>
         </CardContent>
       </Card>
       <div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">

@@ -32,7 +32,9 @@ def issue_token(lease: str) -> "PortalAccessToken":
 def notify(token_doc: "PortalAccessToken", full_name: str, email: str, subject: str, body: str) -> None:
 	"""Email the applicant their tracking link. Delivery failures (e.g. no
 	outgoing Email Account configured yet) must never break the caller's
-	transaction, so we log and swallow instead of raising."""
+	transaction, so we log and swallow instead of raising. Queued (not
+	sent now=True) so a slow/unreachable SMTP server can't hang the
+	request that triggered this - e.g. a Landlord approving a lease."""
 	base_url = frappe.utils.get_url()
 	link = f"{base_url}/rental-portal/apply/status?token={token_doc.token}"
 	try:
@@ -40,7 +42,6 @@ def notify(token_doc: "PortalAccessToken", full_name: str, email: str, subject: 
 			recipients=[email],
 			subject=subject,
 			message=f"<p>Hi {frappe.utils.escape_html(full_name)},</p><p>{body}</p><p><a href=\"{link}\">{link}</a></p>",
-			now=True,
 		)
 	except Exception:
 		frappe.log_error(title="Portal Access Token notification failed", message=frappe.get_traceback())
